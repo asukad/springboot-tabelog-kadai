@@ -40,7 +40,7 @@ public class PasswordResetEventListener {
 
         String recipientAddress = user.getEmail();
         String subject = "パスワードリセットのリクエスト";
-        String resetUrl = passwordResetEvent.getResetUrl() + "?token=" + token;
+        String resetUrl = passwordResetEvent.getResetUrl() + "/confirm?token=" + token;
         String message = "以下のリンクをクリックしてパスワードをリセットしてください。";
 
         SimpleMailMessage mailMessage = new SimpleMailMessage();

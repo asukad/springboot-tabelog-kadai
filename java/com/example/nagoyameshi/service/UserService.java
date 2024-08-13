@@ -2,6 +2,8 @@ package com.example.nagoyameshi.service;
 
 import java.util.Map;
 
+import jakarta.validation.Valid;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,21 +11,29 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.nagoyameshi.entity.Role;
 import com.example.nagoyameshi.entity.User;
 import com.example.nagoyameshi.form.FreeMemberSignupForm;
+import com.example.nagoyameshi.form.PasswordEditForm;
 import com.example.nagoyameshi.form.PremiumMemberSignupForm;
 import com.example.nagoyameshi.form.UserEditForm;
+import com.example.nagoyameshi.repository.CardRepository;
 import com.example.nagoyameshi.repository.RoleRepository;
 import com.example.nagoyameshi.repository.UserRepository;
+import com.example.nagoyameshi.repository.VerificationTokenRepository;
 
 @Service
 public class UserService {
 	private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CardRepository cardRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
     
-    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder,
+    		CardRepository cardRepository, VerificationTokenRepository verificationTokenRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;        
         this.passwordEncoder = passwordEncoder;
+        this.cardRepository = cardRepository;
+        this.verificationTokenRepository = verificationTokenRepository;
     }    
     
     @Transactional
@@ -61,7 +71,7 @@ public class UserService {
 
         return userRepository.save(user);
     }
-    
+        
  // メールアドレスが登録済みかどうかをチェックする
     public boolean isEmailRegistered(String email) {
         User user = userRepository.findByEmail(email);  
@@ -121,5 +131,28 @@ public class UserService {
 	public void refreshAuthenticationByRole(String string) {
 		// TODO 自動生成されたメソッド・スタブ
 		
+	}
+
+	@Transactional
+	public void create(@Valid PasswordEditForm passwordEditForm) {		
+		User user = userRepository.getReferenceById(passwordEditForm.getId());
+		
+		user.setPassword(passwordEncoder.encode(passwordEditForm.getPassword()));
+		
+		userRepository.save(user);
+	}
+
+	public void update(String email) {
+		// TODO 自動生成されたメソッド・スタブ
+		
 	}  
+	
+	@Transactional
+    public void deleteUser(Integer userId) {
+        // verification_tokensテーブルの関連データを削除
+        verificationTokenRepository.deleteByUserId(userId);
+
+        // usersテーブルのデータを削除
+        userRepository.deleteById(userId);
+    }
 }

@@ -13,7 +13,6 @@ public class PasswordResetEvent extends ApplicationEvent {
 
     public PasswordResetEvent(Object source, User user, String resetUrl) {
         super(source);
-        
         this.user = user;
         this.resetUrl = resetUrl;
     }

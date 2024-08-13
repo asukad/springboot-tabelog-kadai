@@ -14,7 +14,12 @@
              
              <main>
                  <div class="container pt-4 pb-5 nagoyameshi-container">
-                     <div class="row justify-content-center">        
+					<div class="row justify-content-center"> 
+						<div th:if="${successMessage}" class="alert alert-success" role="alert">
+							<span th:text="${successMessage}"></span>
+						</div>
+					
+                            
                          <div class="col-xl-3 col-lg-4 col-md-5 col-sm-7">                            
                              <h1 class="mb-4 text-center">ログイン</h1>            
                          

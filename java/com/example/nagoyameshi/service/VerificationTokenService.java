@@ -9,31 +9,26 @@ import com.example.nagoyameshi.repository.VerificationTokenRepository;
 
 @Service
 public class VerificationTokenService {
-    private final VerificationTokenRepository verificationTokenRepository;
-
-    public VerificationTokenService(VerificationTokenRepository verificationTokenRepository) {
+	private final VerificationTokenRepository verificationTokenRepository;
+    
+    
+    public VerificationTokenService(VerificationTokenRepository verificationTokenRepository) {        
         this.verificationTokenRepository = verificationTokenRepository;
-    }
-
+    } 
+    
     @Transactional
     public void create(User user, String token) {
         VerificationToken verificationToken = new VerificationToken();
+        
         verificationToken.setUser(user);
-        verificationToken.setToken(token);
+        verificationToken.setToken(token);        
+        
         verificationTokenRepository.save(verificationToken);
     }    
-
+    
+    // トークンの文字列で検索した結果を返す
     public VerificationToken getVerificationToken(String token) {
         return verificationTokenRepository.findByToken(token);
     }
-
-    public void validatePasswordResetToken(String token) {
-        VerificationToken verificationToken = getVerificationToken(token);
-        if (verificationToken == null) {
-            throw new IllegalArgumentException("無効なトークンです。");
-        }
-        if (verificationToken.isExpired()) {
-            throw new IllegalArgumentException("トークンの有効期限が切れています。");
-        }
-    }
+    
 }

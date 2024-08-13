@@ -1,31 +1,39 @@
 package com.example.nagoyameshi.form;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import org.hibernate.validator.constraints.Length;
 
 public class PasswordEditForm {
-	@NotBlank(message = "パスワードを入力してください。")
+	@NotNull
+    private Integer id;	
+
+	@NotBlank(message = "新しいパスワードを入力してください。")	
+	@Length(min = 8, message = "パスワードは8文字以上で入力してください。")
     private String password;
+	
+	@NotBlank(message = "パスワード（確認用）を入力してください。")
+    private String passwordConfirmation;   
 
-    @NotBlank(message = "確認用パスワードを入力してください。")
-    private String confirmPassword;
-
-    private String token;
+	private String token;
+   
 
     // Getters and Setters
-    public String getPassword() {
+    public String getNewPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setNewPassword(String newPassword) {
+        this.password = newPassword;
     }
 
-    public String getConfirmPassword() {
-        return confirmPassword;
+    public String getPasswordConfirmation() {
+        return passwordConfirmation;
     }
 
-    public void setConfirmPassword(String confirmPassword) {
-        this.confirmPassword = confirmPassword;
+    public void setPasswordConfirmation(String passwordConfirmation) {
+        this.passwordConfirmation = passwordConfirmation;
     }
 
     public String getToken() {
@@ -35,4 +43,18 @@ public class PasswordEditForm {
     public void setToken(String token) {
         this.token = token;
     }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+	public Integer getId() {
+		// TODO 自動生成されたメソッド・スタブ
+		return null;
+	}
+	
 }
