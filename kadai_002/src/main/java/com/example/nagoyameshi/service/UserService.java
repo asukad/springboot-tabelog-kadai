@@ -161,9 +161,15 @@ public class UserService {
 	}
 
 	public void update(String email) {
-		// TODO 自動生成されたメソッド・スタブ
-		
+		// TODO 自動生成されたメソッド・スタブ		
 	}  
+	
+	@Transactional
+	public void updateRole(User user, String roleName) {
+		Role role = roleRepository.findByName(roleName);
+		user.setRole(role);
+		userRepository.save(user);
+	}
 	
 	@Transactional
     public void deleteUser(Integer userId) {
@@ -172,5 +178,6 @@ public class UserService {
 
         // usersテーブルのデータを削除
         userRepository.deleteById(userId);
-    }
+    }	
+	
 }
