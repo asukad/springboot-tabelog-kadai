@@ -1,10 +1,10 @@
 package com.example.nagoyameshi.controller;
 
+import java.util.List;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,6 +31,8 @@ import com.example.nagoyameshi.repository.VerificationTokenRepository;
 import com.example.nagoyameshi.security.UserDetailsImpl;
 import com.example.nagoyameshi.service.StripeService;
 import com.example.nagoyameshi.service.UserService;
+import com.stripe.exception.StripeException;
+import com.stripe.model.Subscription;
 
 @Controller
 @RequestMapping("/user")
@@ -41,13 +43,14 @@ public class UserController {
     private final StripeService stripeService;
     private final RoleRepository roleRepository;
     
+    
     public UserController(UserRepository userRepository, UserService userService, VerificationTokenRepository verificationTokenRepository,
     		StripeService stripeService, RoleRepository roleRepository) {
         this.userRepository = userRepository;    
         this.userService = userService; 
         this.verificationTokenRepository= verificationTokenRepository;
         this.stripeService = stripeService;
-        this.roleRepository = roleRepository;
+        this.roleRepository = roleRepository;        
     }    
     
     // 会員情報ページ
@@ -149,6 +152,7 @@ public class UserController {
     @GetMapping("/downgrade")
     public String showDowngradePage(Model model, @AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
         String stripeCustomerId = userDetailsImpl.getUser().getStripeCustomerId();
+        
         if (stripeCustomerId == null || stripeCustomerId.isEmpty()) {
             stripeCustomerId = "未登録";
         }
@@ -157,32 +161,83 @@ public class UserController {
     }
 
     @PostMapping("/cancel")
-    public ResponseEntity<String> cancelSubscription(@AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
-        try {
-            String customerId = userDetailsImpl.getUser().getStripeCustomerId();
-            if (customerId == null || customerId.isEmpty()) {
-                return ResponseEntity.badRequest().body("Customer ID is missing");
-            }
+    public String cancelSubscription(@AuthenticationPrincipal UserDetailsImpl userDetailsImpl, 
+    		HttpServletRequest request, HttpServletResponse response,RedirectAttributes redirectAttributes) {
+    	
+    	User user = userRepository.getReferenceById(userDetailsImpl.getUser().getId());
+//        User user = userDetailsImpl.getUser();
+        System.out.println("Starting subscription cancellation for user: {}"+ user.getId());
 
-            boolean isCancelled = stripeService.cancelSubscription(customerId);
-            if (isCancelled) {
-                userService.downgrade(userDetailsImpl.getUser().getId());
-                return ResponseEntity.ok("サブスクリプションが解約されました");
-            } else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("サブスクリプション解約に失敗しました");
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("システムエラーが発生しました");
+        try {        	
+            List<Subscription> subscriptions = stripeService.getSubscriptions(user.getStripeCustomerId());
+            System.out.println(subscriptions.size());
+
+            stripeService.cancelSubscriptions(subscriptions);
+            System.out.println("Subscriptions cancelled");
+
+//            String defaultPaymentMethodId = stripeService.getDefaultPaymentMethodId(user.getStripeCustomerId());
+//            System.out.println("Default payment method ID: {}");
+
+//            stripeService.detachPaymentMethodFromCustomer(defaultPaymentMethodId);
+//            System.out.println("Payment method detached");
+
+            // Update the user's membership status in the database
+            user.setRole(roleRepository.findByName("ROLE_FREE"));
+            userRepository.save(user);
+            System.out.println("User role updated to ROLE_FREE");
+
+        } catch (StripeException e) {
+        	e.printStackTrace(); // スタックトレース情報の出力
+        	
+        	System.out.println("Stripe API error during cancellation: ");
+            redirectAttributes.addFlashAttribute("errorMessage", "有料プランの解約に失敗しました。再度お試しください。");
+            return "redirect:/error-page";  // Change to appropriate error page or message handling
         }
-    }
 
-    
+        
+      redirectAttributes.addFlashAttribute("successMessage", "有料プランの解約が完了しました。");
+      
+     // ログアウト処理
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+//        	new SecurityContextLogoutHandler().logout(request, response, auth);
+//            request.getSession().invalidate(); // セッションを無効化
+        	
+          new SecurityContextLogoutHandler().logout(request, response, auth);
+        }
+        
+//        redirectAttributes.addFlashAttribute("successMessage", "有料プランの解約が完了しました。");
+        return "redirect:/";  // Redirect to user's profile or appropriate page
+    }
+            
+            
+//    @PostMapping("/cancel")
+//    public ResponseEntity<String> cancelSubscription(@AuthenticationPrincipal UserDetailsImpl userDetailsImpl) {
+//        try {
+//            String customerId = userDetailsImpl.getUser().getStripeCustomerId();
+//            if (customerId == null || customerId.isEmpty()) {
+//                return ResponseEntity.badRequest().body("Customer ID is missing");
+//            }
+//
+//            boolean isCancelled = stripeService.cancelSubscription(customerId);
+//            if (isCancelled) {
+//                userService.downgrade(userDetailsImpl.getUser().getId());
+//                return ResponseEntity.ok("サブスクリプションが解約されました");
+//            } else {
+//                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("サブスクリプション解約に失敗しました");
+//            }
+//        } catch (Exception e) {
+//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("システムエラーが発生しました");
+//        }
+//    }
+            
  // 退会
     @Transactional
     @PostMapping("/delete")
-    public String delete(@RequestParam("userId") Integer userId, HttpServletRequest request, HttpServletResponse response, RedirectAttributes redirectAttributes) {     
+    public String delete(@RequestParam("userId") Integer userId, HttpServletRequest request, 
+    		HttpServletResponse response, RedirectAttributes redirectAttributes) {     
         // verification_tokensテーブルの関連データを削除
-        verificationTokenRepository.deleteByUserId(userId);
+        verificationTokenRepository.deleteByUserId(userId);       
         
         // usersテーブルのデータを削除
         userRepository.deleteById(userId);
@@ -192,11 +247,14 @@ public class UserController {
         // ログアウト処理
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
-            new SecurityContextLogoutHandler().logout(request, response, auth);
+//        	new SecurityContextLogoutHandler().logout(request, response, auth);
+//            request.getSession().invalidate(); // セッションを無効化
+        	
+          new SecurityContextLogoutHandler().logout(request, response, auth);
         }
         
         return "redirect:/";
-    }        
+    }     
     
 }
 
