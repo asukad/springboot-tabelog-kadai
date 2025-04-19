@@ -69,7 +69,8 @@ public String createStripeSession(UserDetailsImpl userDetailsImpl, HttpServletRe
     	                .build()
     	        )
     	        .setMode(SessionCreateParams.Mode.SUBSCRIPTION)
-    	        .setSuccessUrl(requestUrl.replaceAll("/user/upgrade", "") + "/login?success=true")
+    	        .setSuccessUrl(requestUrl.replaceAll("/user/upgrade", "") + "/user/logoutAfterUpgrade")
+//    	        .setSuccessUrl(requestUrl.replaceAll("/user/upgrade", "") + "/login?success=true")
     	        .setCancelUrl(requestUrl.replace("/user", ""))  
     	        .setCustomerEmail(userDetailsImpl.getUser().getEmail()) // ユーザーのメールアドレスを設定
     	        .putMetadata("userId", userDetailsImpl.getUser().getId().toString())
