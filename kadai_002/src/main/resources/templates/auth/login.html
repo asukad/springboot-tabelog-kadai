@@ -21,7 +21,12 @@
 						
 						<div th:if="${param.success}" class="alert alert-info">
 							<span th:text="'プレミアム会員にアップグレードしました。再度ログインしてください。'"></span>					  
+						</div>   
+						
+						<div th:if="${param.cancelsuccess}" class="alert alert-info">
+							<span th:text="'有料プランの解約が完了しました。'"></span>					  
 						</div>    
+ 
 					
                             
                          <div class="col-xl-3 col-lg-4 col-md-5 col-sm-7">                            
