@@ -1,8 +1,7 @@
 package com.example.nagoyameshi.service;
 
 
-import java.util.Collections;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -19,10 +18,11 @@ import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.Event;
+import com.stripe.model.PaymentMethod;
 import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
-import com.stripe.param.SubscriptionUpdateParams;
+import com.stripe.param.SubscriptionListParams;
 import com.stripe.param.checkout.SessionCreateParams;
 
 
@@ -132,42 +132,82 @@ public String createStripeSession(UserDetailsImpl userDetailsImpl, HttpServletRe
 	    }
 	}
 	
-	public boolean cancelSubscription(String customerId) {
-	    try {
-	        // Stripe APIキーを設定
-	        Stripe.apiKey = stripeApiKey;
+//	public boolean cancelSubscription(String customerId) {
+//	    try {
+//	        // Stripe APIキーを設定
+//	        Stripe.apiKey = stripeApiKey;
+//
+//	        Map<String, Object> params = new HashMap<>();
+//	        params.put("expand", Collections.singletonList("subscriptions"));
+//	        
+//	        // 顧客情報を取得
+//	        Customer customer = Customer.retrieve(customerId, params, null);
+//	        logger.info("取得した顧客情報: {}", customer);
+//
+//	        // サブスクリプションの存在を確認
+//	        if (customer.getSubscriptions().getData().isEmpty()) {
+//	            logger.warn("サブスクリプションが見つかりません: {}", customerId);
+//	            return false;
+//	        }
+//
+//	        // 対象のサブスクリプションを取得
+//	        Subscription subscription = customer.getSubscriptions().getData().get(0);
+//
+//	        // サブスクリプションをキャンセル
+//	        subscription.update(
+//	            SubscriptionUpdateParams.builder()
+//	                .setCancelAtPeriodEnd(true)
+//	                .build()
+//	        );
+//	        logger.info("サブスクリプションが正常にキャンセルされました: {}", subscription.getId());
+//	        return true;
+//
+//	    } catch (StripeException e) {
+//	        logger.error("Stripe APIエラー: 顧客ID: {}, エラーコード: {}, 詳細: {}", customerId, e.getCode(), e.getMessage(), e);
+//	        return false;
+//	    } catch (Exception e) {
+//	        logger.error("予期しないエラーが発生しました: 顧客ID: {}, 詳細: {}", customerId, e.getMessage(), e);
+//	        return false;
+//	    }
+//	 }
+	
+//	顧客のデフォルトの支払方法のIDを取得する
+	public String getDefaultPaymentMethodId(String customerId) throws StripeException {
+		
+		Stripe.apiKey = stripeApiKey; // 追加
+		
+		Customer customer = Customer.retrieve(customerId);
+		
+		System.out.println("Customer invoice settings: " + customer.getInvoiceSettings());
+		System.out.println("Default payment method: " + customer.getInvoiceSettings().getDefaultPaymentMethod());
+			
+		return customer.getInvoiceSettings().getDefaultPaymentMethod();
+	}
+	
+//	支払方法と顧客の紐づけを解除する
+	public void detachPaymentMethodFromCustomer(String paymentMethodId) throws StripeException {
+		PaymentMethod paymentMethod = PaymentMethod.retrieve(paymentMethodId);
+		paymentMethod.detach();
+	}
+	
+//	サブスクリプションを取得する
+	public List<Subscription> getSubscriptions(String customerId) throws StripeException {
+		Stripe.apiKey = stripeApiKey; // 追加
+		
+		SubscriptionListParams subscriptionListParams = 
+			SubscriptionListParams.builder()
+				.setCustomer(customerId)
+				.build();
+		
+		return Subscription.list(subscriptionListParams).getData();
+	}
+	
+//	サブスクリプションをキャンセルする
+	public void cancelSubscriptions(List<Subscription> subscriptions) throws StripeException {
+		Stripe.apiKey = stripeApiKey; // 追加
+		for (Subscription subscription : subscriptions) {
+			subscription.cancel();
+		}
+	}
 
-	        Map<String, Object> params = new HashMap<>();
-	        params.put("expand", Collections.singletonList("subscriptions"));
-	        
-	        // 顧客情報を取得
-	        Customer customer = Customer.retrieve(customerId, params, null);
-	        logger.info("取得した顧客情報: {}", customer);
-
-	        // サブスクリプションの存在を確認
-	        if (customer.getSubscriptions().getData().isEmpty()) {
-	            logger.warn("サブスクリプションが見つかりません: {}", customerId);
-	            return false;
-	        }
-
-	        // 対象のサブスクリプションを取得
-	        Subscription subscription = customer.getSubscriptions().getData().get(0);
-
-	        // サブスクリプションをキャンセル
-	        subscription.update(
-	            SubscriptionUpdateParams.builder()
-	                .setCancelAtPeriodEnd(true)
-	                .build()
-	        );
-	        logger.info("サブスクリプションが正常にキャンセルされました: {}", subscription.getId());
-	        return true;
-
-	    } catch (StripeException e) {
-	        logger.error("Stripe APIエラー: 顧客ID: {}, エラーコード: {}, 詳細: {}", customerId, e.getCode(), e.getMessage(), e);
-	        return false;
-	    } catch (Exception e) {
-	        logger.error("予期しないエラーが発生しました: 顧客ID: {}, 詳細: {}", customerId, e.getMessage(), e);
-	        return false;
-	    }
-	 }
 }
