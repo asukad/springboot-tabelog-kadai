@@ -137,6 +137,23 @@ public class UserController {
         return "redirect:/user/profile";
     }
     
+    //追加箇所
+    @GetMapping("/logoutAfterUpgrade")
+    public String logoutAfterUpgrade(HttpServletRequest request, HttpServletResponse response, RedirectAttributes redirectAttributes) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            new SecurityContextLogoutHandler().logout(request, response, auth);
+        }
+
+        // フラッシュメッセージを設定
+        redirectAttributes.addFlashAttribute("message", "プレミアム会員にアップグレードしました。再度ログインしてください。");
+
+        // ログイン画面にリダイレクト
+        return "redirect:/login";
+    }
+
+
+    
     
     // クレジットカード情報変更  
     @PostMapping("/update-card")
